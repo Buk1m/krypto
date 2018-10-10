@@ -1,0 +1,46 @@
+﻿using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+
+namespace ConsoleApp2
+{
+    public class Converters
+    {
+        public static List<byte>StringToBytes(string text)
+        {
+            return Encoding.Default.GetBytes(text).ToList();
+        }
+
+        public static string BytesToString(byte[] bytes)
+        {
+            return Encoding.Default.GetString(bytes);
+        }
+
+        //TODO: Add proper implementation to split in 64 bits blocks
+        public static List<BitArray> BytesTo64BitArrays(List<byte> bytes)
+        {
+            while (bytes.Count % 8 != 0)
+            {
+                bytes.Add(new byte());
+            }
+
+            List<BitArray> blocks = new List<BitArray>();
+            for (int i = 0; i < bytes.Count; i+=8)
+            {
+                byte[] temp = bytes.Skip(i).Take(8).ToArray();
+                blocks.Add(new BitArray(temp));
+            }
+
+            return blocks;
+        }
+
+        public static byte[] BitArrayToByteArray(BitArray bits)
+        {
+            byte[] ret = new byte[(bits.Length - 1) / 8 + 1];
+            bits.CopyTo(ret, 0);
+            return ret;
+        }
+    }
+}
