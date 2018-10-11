@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,7 +7,7 @@ namespace ConsoleApp2
 {
     public class Converters
     {
-        public static List<byte>StringToBytes(string text)
+        public static List<byte> StringToBytes(string text)
         {
             return Encoding.Default.GetBytes(text).ToList();
         }
@@ -18,7 +17,6 @@ namespace ConsoleApp2
             return Encoding.Default.GetString(bytes);
         }
 
-        //TODO: Add proper implementation to split in 64 bits blocks
         public static List<BitArray> BytesTo64BitArrays(List<byte> bytes)
         {
             while (bytes.Count % 8 != 0)
@@ -27,7 +25,8 @@ namespace ConsoleApp2
             }
 
             List<BitArray> blocks = new List<BitArray>();
-            for (int i = 0; i < bytes.Count; i+=8)
+
+            for (int i = 0; i < bytes.Count; i += 8)
             {
                 byte[] temp = bytes.Skip(i).Take(8).ToArray();
                 blocks.Add(new BitArray(temp));
@@ -36,11 +35,29 @@ namespace ConsoleApp2
             return blocks;
         }
 
-        public static byte[] BitArrayToByteArray(BitArray bits)
+        public static byte[] BitArrayToBytes(BitArray bits)
         {
             byte[] ret = new byte[(bits.Length - 1) / 8 + 1];
             bits.CopyTo(ret, 0);
             return ret;
+        }
+
+
+        public static List<BitArray> StringToBitArrays(string message)
+        {
+            List<byte> bytes = Converters.StringToBytes(message);
+            return Converters.BytesTo64BitArrays(bytes);
+        }
+
+        public static string BitArraysToString(List<BitArray> bitArrays)
+        {
+            string message = "";
+            bitArrays.ForEach(array =>
+            {
+                var bytes = Converters.BitArrayToBytes(array);
+                message += Converters.BytesToString(bytes);
+            });
+            return message;
         }
     }
 }

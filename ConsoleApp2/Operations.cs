@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using ConsoleApp2.ExtensionMethods;
 
 namespace ConsoleApp2
 {
@@ -26,42 +27,48 @@ namespace ConsoleApp2
             }
         }
 
-        public static void Permutate(ref BitArray bits, byte[,] permutationMatrix)
+        public static void Permutate(ref BitArray bitArray, byte[,] permutationMatrix)
         {
             int xLength = permutationMatrix.GetLength(0);
             int yLength = permutationMatrix.GetLength(1);
 
-            BitArray sourceBits = bits;
+            BitArray sourceBits = bitArray;
 
-            bits = new BitArray(permutationMatrix.Length);
+            bitArray = new BitArray(permutationMatrix.Length);
             for (int i = 0; i < xLength; i++)
             {
                 for (int j = 0; j < yLength; j++)
                 {
-                    bits[i * yLength + j] = sourceBits[permutationMatrix[i, j] - 1];
+                    bitArray[i * yLength + j] = sourceBits[permutationMatrix[i, j] - 1];
                 }
             }
         }
 
-        public static List<BitArray> SplitBitArrayInHalf(List<BitArray> bitArray)
+//        public static List<BitArray> GenerateSubkeys(BitArray key)
+//        {
+//
+//        }
+
+        //TODO: add extension method and change this to loop
+        public static void SplitBitArrayInHalf(List<BitArray> bitArrayList, out List<BitArray> leftBlocks, out List<BitArray> rightBlocks)
         {
-            List<BitArray> bits = new List<BitArray>();
-            foreach (BitArray array in bitArray)
+            leftBlocks = new List<BitArray>();
+            rightBlocks = new List<BitArray>();
+
+            foreach (BitArray bitArray in bitArrayList)
             {
-                int blockSize = (array.Count / 2);
+                int blockSize = (bitArray.Count / 2);
                 BitArray leftBitsArray = new BitArray(blockSize);
                 BitArray rightBitsArray = new BitArray(blockSize);
                 for (int i = 0; i < blockSize; i++)
                 {
-                    leftBitsArray.Set(i, array[i]);
-                    rightBitsArray.Set(i, array[blockSize + i]);
+                    leftBitsArray[i] = bitArray[i];
+                    rightBitsArray[i] = bitArray[blockSize + i];
                 }
 
-                bits.Add(leftBitsArray);
-                bits.Add(rightBitsArray);
+                leftBlocks.Add(leftBitsArray);
+                rightBlocks.Add(rightBitsArray);
             }
-
-            return bits;
         }
 
         public static List<BitArray> SplitBitArrayInHalf(BitArray bitArray)
@@ -79,35 +86,18 @@ namespace ConsoleApp2
             bits.Add(leftBitsArray);
             bits.Add(rightBitsArray);
 
-
             return bits;
         }
 
         public static BitArray GenerateRandomKey()
         {
-            const int keyLengthInBytes = 8;
             Random random = new Random();
-            BitArray key = new BitArray(64);
-            int left = random.Next();
-            int right = random.Next();
-            byte[] leftBytes = BitConverter.GetBytes(left);
-            byte[] rightBytes = BitConverter.GetBytes(right);
+
+            byte[] leftBytes = BitConverter.GetBytes(random.Next());
+            byte[] rightBytes = BitConverter.GetBytes(random.Next());
+
             byte[] keyBytes = leftBytes.Concat(rightBytes).ToArray();
             return new BitArray(keyBytes);
-        }
-
-        public static BitArray RemoveParityBitsFromKey(BitArray keyWithParity)
-        {
-            List<bool> keyValues = new List<bool>();
-            for (int i = 0; i < keyWithParity.Length; i++)
-            {
-                if (i % 8 != 7)
-                {
-                    keyValues.Add(keyWithParity[i]);
-                }
-            }
-
-            return new BitArray(keyValues.ToArray());
         }
 
         public static BitArray GenerateRandomKeyWithParityBits()
@@ -148,23 +138,22 @@ namespace ConsoleApp2
 
         public static BitArray SBoxesTransformation(BitArray array)
         {
-            BitArray bits = new BitArray(6);
+            BitArray block = new BitArray(6);
             BitArray transformBitArray = new BitArray(32);
+
             for (int i = 0; i < array.Length / 6; i++)
             {
                 for (int j = 0; j < 6; j++)
                 {
-                    bits[j] = array[i * 6 + j];
+                    block[j] = array[i * 6 + j];
                 }
-                Reverse(ref bits);
+                block.Reverse();
 
-                byte sValue = FindSBlockValue(i, bits);
+                byte sValue = FindSBlockValue(i, block);
                 BitArray b = new BitArray(new byte[] {sValue});
            
-
                 for (int j = 3; j >=0 ; j--)
                 {
-                   
                     transformBitArray.Set(i * 4 + 3-j, b[j]);
                 }
             }
@@ -172,6 +161,7 @@ namespace ConsoleApp2
             return transformBitArray;
         }
 
+        #region Private
         private static byte FindSBlockValue(int blockNumber, BitArray bitArray)
         {
             byte row = FindSBlockRow(bitArray);
@@ -201,19 +191,8 @@ namespace ConsoleApp2
             byte[] bytes = new byte[1];
             column.CopyTo(bytes, 0);
             return bytes[0];
-        }
+        } 
+        #endregion
 
-        public static void Reverse(ref BitArray array)
-        {
-            int length = array.Length;
-            int mid = (length / 2);
-
-            for (int i = 0; i < mid; i++)
-            {
-                bool bit = array[i];
-                array[i] = array[length - i - 1];
-                array[length - i - 1] = bit;
-            }
-        }
     }
 }

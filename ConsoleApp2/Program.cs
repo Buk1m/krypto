@@ -1,58 +1,76 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using ConsoleApp2.ExtensionMethods;
 
 namespace ConsoleApp2
 {
     class Program
     {
+        private const int left = 0;
+        private const int right = 1;
+
         static void Main(string[] args)
-        {
-            BitArray key = Operations.GenerateRandomKeyWithParityBits();
-            string data = "8787878787878787";
-            key = new BitArray(0).FromInt(0x133457799BBCDFF1);
-            Operations.Reverse(ref key);
-            string encryptedMessage = Encrypt(data, key);
-            Operations.Reverse(ref key);
-            string decryptedMessage = Decrypt(encryptedMessage, key);
-            Console.WriteLine("Encrypted:");
-            Console.WriteLine(encryptedMessage);
-            Console.WriteLine("Decrypted:");
-            Console.WriteLine(decryptedMessage);
+        { 
+            string data = @"Rozpierdoliłaś mi wakacje
+Na stacji stoję stoję sam
+x2
+
+Być może miałaś jakieś racje 
+Lecz cała miłość na marne
+Miłość na marne
+
+Kiedy pociąg wjeżdża na stację
+pracownik kolejnictwa mi w oczy patrzy
+
+Ma wyraz oczu taki jak ty
+lecz ty rozpierdoliłaś mi wakacje
+
+Cała miłość na marne
+
+Rozpierdoliłaś mi wakacje
+Cała miłość na marne
+Miłość na marne
+
+Jest tylko jedno światło dla mnie
+Światło jest czerwone
+Rozpierdoliłaś mi wakacje
+Odjeżdżam w swoją stronę
+
+I zanim znów się łudzić zacznę, wiem
+Cała miłość na marne
+Miłość na marne
+
+Rozpierdoliłaś mi wakacje
+Cała miłość na marne
+Miłość na marne"; //Converters.BytesToString(temp);
+            Console.WriteLine("MESSAGE:");
+            Console.WriteLine(data);
+            var key = new BitArray(0).FromInt(0x133457799BBCDFF1);
+            string gmsg = Encrypt(data, key);
+            Console.WriteLine("==========================================================================");
+            Console.WriteLine("DECRYPTED:");
+            Console.WriteLine(Decrypt(gmsg, key));
+
             Console.ReadKey();
         }
+
+
         static string Encrypt(string message, BitArray key)
         {
-            short cycleNumber = 16;
-            List<byte> cypherInBytes = Converters.StringToBytes(message);;
-            var data = new BitArray(0).FromInt(0x0123456789ABCDEF);
-            Operations.Reverse(ref data);
-            cypherInBytes = Converters.BitArrayToByteArray(data).ToList();
-            List<BitArray> blocks = Converters.BytesTo64BitArrays(cypherInBytes);
-
-            // Key Permutation 64->56
+            List<BitArray> cypherBlocks = Converters.StringToBitArrays(message);
             Operations.Permutate(ref key, Constants.KeyPermutationMatrix);
             List<BitArray> keyHalves = Operations.SplitBitArrayInHalf(key);
-
-            // Initial Permutation
-            Operations.Permutate(ref blocks, Constants.InitialPermutationMatrix);
-
-            // Split in blocks
-            blocks = Operations.SplitBitArrayInHalf(blocks);
-            List<BitArray> leftBlocks = blocks.Where((x, i) => (i % 2 == 0)).ToList();
-            List<BitArray> rightBlocks = blocks.Where((x, i) => (i % 2 == 1)).ToList();
-
-            for (int i = 0; i < cycleNumber; i++)
+            Operations.Permutate(ref cypherBlocks, Constants.InitialPermutationMatrix);
+            Operations.SplitBitArrayInHalf(cypherBlocks, out List<BitArray> leftBlocks, out List<BitArray> rightBlocks);
+            for (int i = 0; i < Constants.cycleNumber; i++)
             {
                 var prevRightBlocks = new List<BitArray>(rightBlocks);
                 keyHalves.ForEach(half => half.ShiftLeft(Constants.KeyBitShiftValues[i]));
-                key = keyHalves[0].Append(keyHalves[1]);
+                key = keyHalves[left].Append(keyHalves[right]);
 
                 Operations.Permutate(ref key, Constants.CompressionPermutationMatrix);
-              
+
                 for (int j = 0; j < rightBlocks.Count; j++)
                 {
                     BitArray block = rightBlocks[j];
@@ -63,108 +81,48 @@ namespace ConsoleApp2
                     block = block.Xor(leftBlocks[j]);
                     rightBlocks[j] = block;
                 }
+
                 leftBlocks = prevRightBlocks;
             }
 
             List<BitArray> cypher = new List<BitArray>();
             BitArray connector = new BitArray(0);
-            for (int i = 0; i < leftBlocks.Count+1/2; i++)
+            for (int i = 0; i < leftBlocks.Count + 1 / 2; i++)
             {
-
                 connector = rightBlocks[i].Append(leftBlocks[i]);
                 cypher.Add(connector);
-                foreach (bool o in cypher[i])
-                {
-                    Console.Write(o ? 1 : 0);
-                }
-
-                Console.WriteLine();
             }
 
-            Operations.Permutate(ref cypher, Constants.EndingPermutationMatrix);
-
-            List<byte[]> decryptedBytes = new List<byte[]>();
-            for (var i = 0; i < cypher.Count; i++)
-            {
-                                foreach (bool o in cypher[i])
-                {
-                    Console.Write(o ? 1 : 0);
-                }
-                decryptedBytes.Add(Converters.BitArrayToByteArray(cypher[i]));
-            }
-
-            Console.WriteLine();
-            string encryptedMessage = "";
-
-            foreach (var array in decryptedBytes)
-            {
-                try
-                {
-                    using (var fs = new FileStream("encrypted.dat", FileMode.Append, FileAccess.Write))
-                    {
-                        fs.Write(array, 0, array.Length);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine("Exception caught in process: {0}", ex);
-                }
-
-                encryptedMessage += Converters.BytesToString(array);
-            }
-
-
-            return encryptedMessage;
+            Operations.Permutate(ref cypher, Constants.FinalPermutationMatrix);
+            return Converters.BitArraysToString(cypher);
         }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
         static string Decrypt(string message, BitArray key)
         {
-            short cycleNumber = 16;
-            List<byte> cypherInBytes = Converters.StringToBytes(message); ;
-            var data = Converters.BytesTo64BitArrays(cypherInBytes);
-            data.ForEach( bytes => Operations.Reverse(ref bytes));
-//            cypherInBytes = Converters.BitArrayToByteArray(data).ToList();
-            List<BitArray> blocks = Converters.BytesTo64BitArrays(cypherInBytes);
-            blocks = data;
+            List<BitArray> cypherBlocks = Converters.StringToBitArrays(message);
+
             // Key Permutation 64->56
             Operations.Permutate(ref key, Constants.KeyPermutationMatrix);
             List<BitArray> keyHalves = Operations.SplitBitArrayInHalf(key);
 
             // Initial Permutation
-            Operations.Permutate(ref blocks, Constants.InitialPermutationMatrix);
-
+            Operations.Permutate(ref cypherBlocks, Constants.InitialPermutationMatrix);
             // Split in blocks
-            blocks = Operations.SplitBitArrayInHalf(blocks);
-            List<BitArray> leftBlocks = blocks.Where((x, i) => (i % 2 == 0)).ToList();
-            List<BitArray> rightBlocks = blocks.Where((x, i) => (i % 2 == 1)).ToList();
+            Operations.SplitBitArrayInHalf(cypherBlocks, out List<BitArray> leftBlocks, out List<BitArray> rightBlocks);
 
-            for (int i = 0; i < cycleNumber; i++)
+            for (int i = 0; i < 16; i++)
+            {
+                keyHalves.ForEach(half => half.ShiftLeft(Constants.KeyBitShiftValues[i]));
+            }
+
+            for (int i = Constants.cycleNumber - 1; i >= 0; i--)
             {
                 var prevRightBlocks = new List<BitArray>(rightBlocks);
-                keyHalves.ForEach(half => half.ShiftRight(Constants.KeyBitShiftValues[i]));
-                key = keyHalves[0].Append(keyHalves[1]);
+                if (i < 15)
+                    keyHalves.ForEach(half => half.ShiftRight(Constants.KeyBitShiftValues[i + 1]));
+                key = keyHalves[left].Append(keyHalves[right]);
 
                 Operations.Permutate(ref key, Constants.CompressionPermutationMatrix);
-
                 for (int j = 0; j < rightBlocks.Count; j++)
                 {
                     BitArray block = rightBlocks[j];
@@ -175,48 +133,18 @@ namespace ConsoleApp2
                     block = block.Xor(leftBlocks[j]);
                     rightBlocks[j] = block;
                 }
+
                 leftBlocks = prevRightBlocks;
             }
 
             List<BitArray> cypher = new List<BitArray>();
-            BitArray connector = new BitArray(0);
-            for (int i = 0; i < leftBlocks.Count; i++)
+            for (int i = 0; i < leftBlocks.Count + 1 / 2; i++)
             {
-                connector = rightBlocks[i].Append(leftBlocks[i]);
-                cypher.Add(connector);
-
+                cypher.Add(rightBlocks[i].Append(leftBlocks[i]));
             }
 
-            Operations.Permutate(ref cypher, Constants.EndingPermutationMatrix);
-
-            List<byte[]> decryptedBytes = new List<byte[]>();
-            for (var i = 0; i < cypher.Count; i++)
-            {
-                decryptedBytes.Add(Converters.BitArrayToByteArray(cypher[i]));
-            }
-
-            string encryptedMessage = "";
-
-            foreach (var array in decryptedBytes)
-            {
-                try
-                {
-                    using (var fs = new FileStream("encrypted.dat", FileMode.Append, FileAccess.Write))
-                    {
-                        fs.Write(array, 0, array.Length);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine("Exception caught in process: {0}", ex);
-                }
-
-                encryptedMessage += Converters.BytesToString(array);
-            }
-
-
-            return encryptedMessage;
-
+            Operations.Permutate(ref cypher, Constants.FinalPermutationMatrix);
+            return Converters.BitArraysToString(cypher);
         }
     }
 }

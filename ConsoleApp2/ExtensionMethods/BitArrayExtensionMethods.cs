@@ -9,56 +9,60 @@ namespace ConsoleApp2.ExtensionMethods
     {
         public static BitArray FromInt(this BitArray bitArray, ulong number, int bytesNumber = 8)
         {
-            byte[] byteArray = BitConverter.GetBytes(number);
-            return new BitArray(byteArray.Take(bytesNumber).ToArray());
+            byte[] bytes = BitConverter.GetBytes(number);
+            BitArray bits = new BitArray(bytes.Take(bytesNumber).ToArray());
+            bits.Reverse();
+            return bits;
         }
 
-        public static BitArray ShiftLeft(this BitArray bitArray, int value)
+        public static void Reverse(this BitArray bitArray)
         {
-            for (int j = 0; j < value; j++)
+            int length = bitArray.Length;
+
+            for (int i = 0; i < length / 2; i++)
             {
-                var first = bitArray[0];
-                for (int i = 1; i < bitArray.Count; i++)
+                bool bit = bitArray[i];
+                bitArray[i] = bitArray[length - i - 1];
+                bitArray[length - i - 1] = bit;
+            }
+        }
+
+        public static BitArray ShiftLeft(this BitArray bitArray, int shiftsNumber)
+        {
+            for (int i = 0; i < shiftsNumber; i++)
+            {
+                bool firstBit = bitArray[0];
+                for (int j = 1; j < bitArray.Count; j++)
                 {
-                    bitArray[i - 1] = bitArray[i];
+                    bitArray[j - 1] = bitArray[j];
                 }
 
-                bitArray[bitArray.Count - 1] = first;
+                bitArray[bitArray.Count - 1] = firstBit;
             }
 
             return bitArray;
         }
 
-        public static BitArray ShiftRight(this BitArray bitArray, int value)
+        public static BitArray ShiftRight(this BitArray bitArray, int shiftsNumber)
         {
-            for (int j = 0; j < value; j++)
+            for (int j = 0; j < shiftsNumber; j++)
             {
-                var last = bitArray[bitArray.Count - 1];
-                for (int i = bitArray.Count - 1; i > 1; i--)
+                bool lastBit = bitArray[bitArray.Count - 1];
+                for (int i = bitArray.Count - 1; i >= 1; i--)
                 {
                     bitArray[i] = bitArray[i - 1];
                 }
-
-                bitArray[0] = last;
+                bitArray[0] = lastBit;
             }
-
             return bitArray;
         }
 
-        public static BitArray Prepend(this BitArray current, BitArray before)
+        public static BitArray Append(this BitArray baseArray, BitArray appendArray)
         {
-            bool[] bools = new bool[current.Count + before.Count];
-            before.CopyTo(bools, 0);
-            current.CopyTo(bools, before.Count);
-            return new BitArray(bools);
-        }
-
-        public static BitArray Append(this BitArray current, BitArray after)
-        {
-            bool[] bools = new bool[current.Count + after.Count];
-            current.CopyTo(bools, 0);
-            after.CopyTo(bools, current.Count);
-            return new BitArray(bools);
+            bool[] mergedArray = new bool[baseArray.Count + appendArray.Count];
+            baseArray.CopyTo(mergedArray, 0);
+            appendArray.CopyTo(mergedArray, baseArray.Count);
+            return new BitArray(mergedArray);
         }
     }
 }

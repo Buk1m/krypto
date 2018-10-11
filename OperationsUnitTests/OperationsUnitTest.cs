@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.ComponentModel.Design;
-using System.IO.Ports;
 using ConsoleApp2;
 using ConsoleApp2.ExtensionMethods;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -73,10 +71,12 @@ namespace OperationsUnitTests
             bitArrays.Add(new BitArray(0).FromInt(0x0123_0000, 4));
 
             List<BitArray> expectedBitArrays = new List<BitArray>();
-            expectedBitArrays.Add(new BitArray(0).FromInt(0x00000000, 4));
             expectedBitArrays.Add(new BitArray(0).FromInt(0x0FFFFFFF, 4));
-            expectedBitArrays.Add(new BitArray(0).FromInt(0x0000, 2));
+
+            expectedBitArrays.Add(new BitArray(0).FromInt(0x00000000, 4));
             expectedBitArrays.Add(new BitArray(0).FromInt(0x0123, 2));
+
+            expectedBitArrays.Add(new BitArray(0).FromInt(0x0000, 2));
 
             List<BitArray> splitBitArrays = Operations.SplitBitArrayInHalf(bitArrays);
             int[] expectedValues = new int[4];
@@ -138,14 +138,6 @@ namespace OperationsUnitTests
         public void CheckGenerateKeySize()
         {
             Assert.AreEqual(Operations.GenerateRandomKey().Length, 64);
-        }
-
-        [TestMethod]
-        public void CheckRemoveParityBits()
-        {
-            BitArray keyWithParity = Operations.GenerateRandomKey();
-            BitArray key = Operations.RemoveParityBitsFromKey(keyWithParity);
-            Assert.AreEqual(key.Length, 56);
         }
     }
 
